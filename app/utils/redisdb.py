@@ -9,14 +9,21 @@ from app.utils.signleton import SingletonClass
 from app.configs import settings
 import redis
 
+# "172.27.230.25:54278
+# username: admin
+# password: admin
+# db: exam"
+
 class RedisClient(SingletonClass):
     def _singleton_init(self, **kwargs):
         self.client = None
 
     def _create_conn(self):
-        self.client = redis.StrictRedis(host='localhost',
-                                    port=6379,
+        self.client = redis.StrictRedis(host='172.27.230.25',
+                                    port=54278,
                                     db=0,
+                                    username='admin',
+                                    password='admin',
                                     retry_on_timeout=True)
     
     async def get_client(self):

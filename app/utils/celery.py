@@ -9,8 +9,8 @@ config = {
 }
 DEMO = Celery(
     'celery_demo_app',
-    broker="redis://localhost:6379/0",
-    result_backend="redis://localhost:6379/0",
+    broker="redis://admin:admin@172.27.230.25:54278/0",
+    result_backend="redis://admin:admin@172.27.230.25:54278/0",
     result_expires=3600)
 
 @DEMO.task(

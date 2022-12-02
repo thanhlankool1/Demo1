@@ -11,7 +11,7 @@ stop(){
 
 start(){
     echo $celery_path
-    $celery_path -A app.utils.celery worker --loglevel=info --detach
+    $celery_path -A app.utils.celery worker --loglevel=info #--detach
 }
 
 start

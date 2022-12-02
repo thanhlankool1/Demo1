@@ -5,6 +5,8 @@ from umongo import EmbeddedDocument, fields, Document
 class UserInfo(Document):
     username = fields.StringField()
     email = fields.EmailField()
+    password = fields.StringField()
+    fullname = fields.StringField(allow_none=True)
     
     class Meta:
         collection_name = "userinfo"
