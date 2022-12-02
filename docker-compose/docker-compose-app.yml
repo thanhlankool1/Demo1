@@ -1,0 +1,16 @@
+version: '3.6'
+networks:
+  my_network:
+    driver: bridge
+    
+services:
+  app:
+    image: demo_app_lanlt23
+    container_name: demo_app_lanlt23
+    networks:
+      - my_network
+    ports:
+      - 8000:8000
+    volumes:
+      - ./logs:/demo_app/logs
+    command: /bin/bash /demo_app/scripts/run_dev.sh && ./demo_app/scripts/run_celery.sh

@@ -1,0 +1,14 @@
+version: '3.6'
+networks:
+  my_network:
+    driver: bridge
+
+
+services:
+  redis:
+    image: redis:6.2-alpine
+    networks:
+      - my_network
+    restart: always
+    ports:
+      - '6379:6379'
