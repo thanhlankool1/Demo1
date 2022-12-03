@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .views.authentication import router as authen
+from .views.user import router as authen
 
 router = APIRouter()
 

@@ -1,4 +1,4 @@
-FROM python:3.8 AS build_demo
+FROM python:3.10 AS build_demo
 
 ENV no_proxy=localhost
 
@@ -16,7 +16,7 @@ COPY ./run_*.py /demo_app/
 RUN /bin/bash ./scripts/create_venv.sh
 RUN /bin/bash ./scripts/install_requirements.sh
 
-FROM python:3.8
+FROM python:3.10
 
 WORKDIR /demo_app
 COPY --from=build_demo /demo_app ./
