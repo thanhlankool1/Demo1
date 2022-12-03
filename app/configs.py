@@ -59,7 +59,29 @@ class AppEnvConfig(BaseSettings):
     REDIS_SERVER : Optional[str] = 'localhost'
     REDIS_PORT : Optional[str] = '6379'
     
+    
+    
+    
+    WS_SERVER_ENABLE_DEBUGGING: bool = True
+    # ``'*'`` to allow all origins, or to ``[]`` to disable CORS handling, tested
+    WS_SERVER_CORS_ORIGINS: Union[str, List] = "*"
+    WS_SERVER_MOUNT_LOCATION: str = "/ws"
+    WS_SERVER_SOCKETIO_PATH: str = "socket.io"
+    WS_SERVER_KEEP_ALIVE: int = 120
+    WS_SERVER_MAX_FILE_SIZE: int = 90 * (10**6)  # bytes  -> 10 Mb
+    WS_SERVER_PING_TIMEOUT: int = 20  # s        -> 30 s
+    WS_SERVER_PING_INTERVAL: int = 50  # s        -> 30 s
+
+    
     # -----------------Reids End-----------------
+    
+    
+    # -----------------Telegram-----------------
+    APP_TELEGRAM_BOT_TOKEN: Optional[str] = None
+    APP_TELEGRAM_NOTIFICATION_CHANNEL: Optional[str] = None
+    APP_TELEGRAM_ERROR_CHANNEL: Optional[str] = None
+    APP_TELEGRAM_ADMIN_ID: Optional[str] = None
+    # -----------------end-----------------
 
 basedir = os.getcwd()
 env_file = os.path.join(basedir, 'etc', '.env')

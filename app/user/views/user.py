@@ -1,127 +1,120 @@
-from fastapi import Depends, APIRouter, File, UploadFile, Form
-from fastapi.responses import RedirectResponse
-from app.user.models import UserInfo, Role
-from app.user.schemas.user import UserRegister, Login, Verify
-import json
-from functools import wraps
-from app.utils import celery
+from fastapi import Depends, APIRouter
+from fastapi.responses import JSONResponse
+from typing import List, Any
+from pydantic import BaseModel
+
+from . import APIResponse, limit_connect
+
+#import utils
+from app.utils.celery import *
 from app.utils.redisdb import redis_client
 from app.utils.logger import logger
-import hashlib, uuid
-from app.utils.authentication import JwtAuthen
+from app.utils.authentication import get_user_in_jwt
+
+#import Schema
+from app.user.schemas.user import (
+    Login,
+    InputAddProfile
+)
+
+#import models
+from app.user.models import UserInfo, Userprofile
 router = APIRouter(tags=['Authentication'])
 
-
-role_permission = {
-    "new" : [],
-    "admin" : ['get_info']
-}
-
-def check_role(
-        func,
-        permission_name=[]):
-    def decorator():
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            pass
-            # check role mapping permision
-        return True
-
-@router.post("/register")
-async def register(data : UserRegister):
-    new_user : UserInfo = await UserInfo.find_one({  # type: ignore
-        "username" : data.email,
+@router.post('/get_profile', response_model=APIResponse)
+async def get_profile(current_user : Login = Depends(get_user_in_jwt)):
+    if not current_user:
+        return {
+            "msg" : "not ok"
+        }
+    user : UserInfo = await UserInfo.find_one({  # type: ignore
+        "email" : current_user.get("email") # type: ignore
+        })  
+    if not user:
+        return {}
+    
+    user_profile : Userprofile = await Userprofile.find_one({  # type: ignore
+        "user_id" : user.id  # type: ignore
     })
     
-    if new_user:
-        return False
     
-    new_user : UserInfo = UserInfo(
-        username = data.username,
-        email = data.email,
-        password = hashlib.md5(data.password.encode()).hexdigest())
-    
-    await new_user.commit()  # type: ignore
-    return {
-        "username" : new_user.username,
-        "email" : new_user.email,
-        "id" : str(new_user.id),  # type: ignore
-        "token" : JwtAuthen().encode({
-            "username" : new_user.username,
-            "password" : hashlib.md5(data.password.encode()).hexdigest()
-            })
-    }
-    
-@router.post("/login")
-async def login(data : Login):
-    if not data:
-        return
-    
-    new_user : UserInfo = await UserInfo.find_one({  # type: ignore
-        "username" : data.username,
-        "password" : hashlib.md5(data.password.encode()).hexdigest()
-    })
-    
-    print(new_user)
-    if not new_user:
-        return False
-    
-    return {
-        "username" : data.username,
-        "id" : str(new_user.id),  # type: ignore
-        "token" : JwtAuthen().encode({
-            "username" : data.username,
-            "password" : hashlib.md5(data.password.encode()).hexdigest()
-            })
+    data = {
+        "_id" : str(user.id),  # type: ignore
+        "username" : user.username,
+        "email" : user.username,
+        "full_name" : user_profile.full_name,
+        "address" : user_profile.address,
+        "phone_number" : user_profile.phone_number
     }
 
-@router.post('/get_info')
-@check_role(
-    func,
-    
-)
-async def get_my_info(user : Verify):
-    if not user.token:
-        return False
-    try:
-        info = JwtAuthen().decode(user.token)
-    except Exception as e:
-        return False
-    
-    data_info : UserInfo = await UserInfo.find_one({"username" : info.get("username")})  # type: ignore
-    if data_info.role_name == 'new':
-        return False
-    
     return {
-        "email" : data_info.email,
+        "data" : [data]
+    }
+    
+@router.post('/change_profile', response_model=APIResponse)
+@limit_connect
+async def change_profile(data: InputAddProfile, current_user : Login = Depends(get_user_in_jwt)):
+    if not current_user:
+        return JSONResponse(
+            content= {
+                "success" : False,
+                "msg" : "Invalid token"
+                }
+        )
+    data_info : UserInfo = await UserInfo.find_one({"email" : current_user.get("email")})  # type: ignore
+    if not data_info:
+        return { "msg" : "user info"}
+    profile : Userprofile  = await Userprofile.find_one({
+        "user_id" : data_info.id
+    })
+    
+    if not profile:
+        return { "msg" : "profile"}
+    
+    profile["address"] = data.address
+    profile["full_name"] = data.full_name
+    profile["phone_number"] = data.phone_number
+    await profile.commit()
+    
+    data = {
+        "_id" : str(data_info.id),  # type: ignore
         "username" : data_info.username,
+        "email" : data_info.username,
+        "full_name" : profile.full_name,
+        "address" : profile.address,
+        "phone_number" : profile.phone_number
+    }
+    
+    return {
+        "success" : True,
+        "data" : [data]
     }
 
+@router.post('/delete_profile', response_model=APIResponse)
+async def delete_profile(current_user : Login = Depends(get_user_in_jwt)):
+    if not current_user:
+        return JSONResponse(
+            content= {"msg" : "Invalid token"}
+        )
+    user_info : UserInfo = await UserInfo.find_one({"email" : current_user.get("email")})  # type: ignore
+    if not user_info:
+        return {}
+    user_profile : Userprofile = await Userprofile.find_one({"user_id" : user_info.id})# type: ignore
+    if user_profile:
+        await user_profile.delete()
     
-@router.get("/task_send_noti")
+    await user_info.delete()
+    
+    return {"success" : True}
+
+@router.get("/task_send_noti", response_model=APIResponse)
 async def task():
     datas = {
         "delay" : 5,
         "name" : "LanLT23"
     }
-    celery.first_task.apply_async(
+    first_task.apply_async(
         args = [datas],
-        link=celery.save_to_mongo.s()
+        link=save_to_mongo.s()
     )
-    return True
-
-
-@router.post("/create_role")
-async def create_role(data :dict):
-    if await Role.find_one({
-        "role_name" : data.get("role_name")
-    }):
-        return False
-    
-    new_role : Role= Role(
-        role_name=data.get('role_name'),
-        desc=data.get('desc',"")
-    )
-    await new_role.commit()
-    
     return True

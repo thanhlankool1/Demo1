@@ -1,30 +1,21 @@
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.middleware import Middleware
-from app.configs import settings
-from app.utils.logger import logger
-from app.user import router as user
+from .api import app as api_app
+from .ws import initialize_socketio_event_handlers, socketio_app
+from app.event_app import start_events, stop_events
 
-logger.critical("Stast app")
 
 app = FastAPI(
-    title=settings.APP_PROJECT_NAME,
-    description="Demo App",
-    # middleware=middlewares,
-    docs_url=settings.APP_DOCS_URL,
-    openapi_url='/api/openapi.json',
-    redoc_url=None
-)
-
-
-for i in (
-    {'router':user, "prefix" : "/user"},
-):
-    app.include_router(
-        router = i.get("router"),  # type: ignore
-        prefix = i.get("prefix")   # type: ignore
+    docs_url=None,
+    on_startup=start_events,
+    on_shutdown=stop_events
     )
 
-@app.get("/")
-async def root():
-    return {"message": "Demo App!"}
+
+# mount websocket
+app.mount("/ws", socketio_app)
+initialize_socketio_event_handlers()
+
+
+# mount api app
+app.mount("/", api_app)
